@@ -1,0 +1,14 @@
+{
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "python.defaultInterpreterPath": "/home/xsf/miniconda3/envs/rag-all-stack/bin/python",
+  "python.analysis.typeCheckingMode": "strict",
+  "python.analysis.extraPaths": ["services/ai"],
+  "python.testing.pytestEnabled": true,
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda"
+}

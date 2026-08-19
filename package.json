@@ -1,0 +1,25 @@
+{
+  "name": "rag-all-stack",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@rag/prettier-config": "workspace:*",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.10",
+    "typescript": "^6.0.3"
+  },
+  "prettier": "@rag/prettier-config"
+}

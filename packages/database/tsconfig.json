@@ -1,0 +1,4 @@
+{
+  "extends": "@rag/typescript-config/node.json",
+  "include": ["**/*.ts"]
+}

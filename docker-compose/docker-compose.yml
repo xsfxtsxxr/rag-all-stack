@@ -1,0 +1,66 @@
+name: rag-all-stack
+
+# 本地开发：默认只启动 PostgreSQL（AI 服务在宿主机直跑，热更新方便）。
+# 部署：加 --profile deploy 才会一并启动 AI 服务容器（无热更新，改代码需重建镜像）。
+# 环境变量全部来自同目录 .env（由 .env.example 复制），compose 会自动加载，无需 --env-file。
+# 说明：Next.js 在宿主机运行（热更新方便），不在本文件中。
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-pgvector/pgvector:pg16}
+    container_name: rag-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-rag_all_stack_db}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rag_all_stack_db}
+      POSTGRES_DB: ${POSTGRES_DB:-rag_all_stack_db}
+    ports:
+      - '${POSTGRES_HOST_PORT:-55432}:${POSTGRES_CONTAINER_PORT:-5432}'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-rag_all_stack_db} -d ${POSTGRES_DB:-rag_all_stack_db}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ai:
+    # 部署专用（docker compose --profile deploy up -d 才启动）：
+    # 本地开发请直跑 services/ai（poetry run uvicorn app.main:app --reload --port 8008），容器无热更新
+    profiles: ['deploy']
+    build:
+      context: ../services/ai
+      args:
+        # 网络受限时可在 .env 中切换为镜像源（如 https://pypi.tuna.tsinghua.edu.cn/simple）
+        PYPI_INDEX_URL: ${PYPI_INDEX_URL:-https://pypi.org/simple}
+    container_name: rag-ai
+    environment:
+      # 容器内访问 PostgreSQL 用服务名与容器端口
+      DATABASE_URL: postgres://${POSTGRES_USER:-rag_all_stack_db}:${POSTGRES_PASSWORD:-rag_all_stack_db}@postgres:5432/${POSTGRES_DB:-rag_all_stack_db}
+      DOCS_DIR: /data/inbox
+      # 嵌入模型下载源（国内无法访问 huggingface.co 时用 hf-mirror.com 镜像）
+      HF_ENDPOINT: ${HF_ENDPOINT:-https://hf-mirror.com}
+      # 禁用 Xet 存储（镜像不支持 cas-server 时避免 401，回退普通文件下载）
+      HF_HUB_DISABLE_XET: '1'
+      EMBED_MODEL: ${EMBED_MODEL:-BAAI/bge-small-zh-v1.5}
+      EMBED_DIM: ${EMBED_DIM:-512}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      # 推理强度 low/high/max（glm-5.3 等推理模型），留空则不发送
+      LLM_REASONING_EFFORT: ${LLM_REASONING_EFFORT:-}
+    ports:
+      - '${AI_HOST_PORT:-58008}:8000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      # 待索引 Word 文档目录（只读挂载，容器内路径 /data/inbox）
+      - ../data/inbox:/data/inbox:ro
+      # 嵌入模型缓存（fastembed 下载的 ONNX 模型持久化，避免每次重建容器重复下载）
+      - hfcache:/root/.cache
+
+volumes:
+  pgdata:
+    name: rag-postgres-data
+  hfcache:
+    name: rag-hfcache-data

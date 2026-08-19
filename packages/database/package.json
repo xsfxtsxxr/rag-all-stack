@@ -1,0 +1,28 @@
+{
+  "name": "@rag/database",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./schema": "./schema/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:init": "tsx --env-file=../../.env seeds/init-db.ts",
+    "db:seed": "tsx --env-file=../../.env seeds/seed.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.23.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@rag/typescript-config": "workspace:*",
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3"
+  }
+}
