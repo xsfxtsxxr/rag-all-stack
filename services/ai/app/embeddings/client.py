@@ -23,6 +23,5 @@ def embed_texts(texts: list[str], model_name: str) -> list[list[float]]:
         with _lock:
             if _model is None:
                 _model = TextEmbedding(model_name=model_name)
-    if _model is None:
-        raise RuntimeError("嵌入模型加载失败")
+    assert _model is not None, "嵌入模型加载失败"
     return [vec.tolist() for vec in _model.embed(texts)]
