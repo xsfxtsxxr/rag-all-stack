@@ -3,6 +3,10 @@ FROM python:3.13-slim
 ENV PYTHONUNBUFFERED=1 \
     POETRY_VIRTUALENVS_IN_PROJECT=true
 
+# opencv-python（rapidocr 依赖）在 slim 镜像上需要以下系统库
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+
 # 可选 PyPI 镜像（网络受限环境通过 compose 的 PYPI_INDEX_URL 切换，如阿里云/清华源）
 ARG PYPI_INDEX_URL=https://pypi.org/simple
 

@@ -2,7 +2,7 @@
 
 面向工业销售询盘的 RAG 知识库系统（精简版）：文档管理（本地文件夹扫描索引）、报价管理与智能问答。无文件上传、无消息队列、无独立向量库，整体保持轻量。
 
-- **apps/web**：Next.js 16 前端 + 业务 API（问答 SSE 代理、报价 CRUD、重索引触发）
+- **apps/web**：Next.js 16 前端 + 业务 API（问答 SSE 代理、图片询盘、报价 CRUD、重索引触发）
 - **services/ai**：FastAPI AI 服务（python-docx 解析、fastembed 向量化、pgvector 检索与问答）
 - **packages**：Drizzle schema / 共享类型
 - **tooling**：共享 TS / ESLint / Prettier 配置
@@ -95,7 +95,8 @@ poetry run ruff check . && poetry run mypy app tests   # lint + 类型检查
 
 - 默认嵌入模型 `BAAI/bge-small-zh-v1.5`（512 维，fastembed/ONNX 本地推理，无 torch 依赖）；切换模型时同步修改 `EMBED_MODEL`/`EMBED_DIM`（本地直跑改根 `.env`，部署容器改 `docker-compose/.env`）
 - 未配置 `LLM_BASE_URL` 时问答降级为直接返回检索资料；配置 OpenAI 兼容接口（如 GLM Coding Plan）后启用生成式回答
-- 接口：`POST /api/reindex`（全量重索引）、`POST /api/reindex-quotes`（仅报价）、`GET /api/documents`（已索引文档）、`POST /api/ask/stream`（SSE 问答）
+- 图片询盘：`POST /api/ask/image`（multipart：`question` + `image`）用 RapidOCR（onnxruntime 引擎，模型打包在 wheel 内无需下载）识别规格参数截图 → 向量检索 → 流式生成产品型号与价格推荐；聊天页输入框旁的上传按钮即走此链路
+- 接口：`POST /api/reindex`（全量重索引）、`POST /api/reindex-quotes`（仅报价）、`GET /api/documents`（已索引文档）、`POST /api/ask/stream`（SSE 问答）、`POST /api/ask/image`（图片询盘）
 
 ## 环境变量
 

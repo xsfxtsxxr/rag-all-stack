@@ -2,7 +2,13 @@ from collections.abc import AsyncIterator
 
 import pytest
 
-from app.rag.chain import LLMError, build_context, stream_answer
+from app.rag.chain import (
+    SPEC_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
+    LLMError,
+    build_context,
+    stream_answer,
+)
 
 
 def test_build_context_skips_empty() -> None:
@@ -42,6 +48,7 @@ async def _fake_stream_llm_raising(
     context_text: str,
     question: str,
     reasoning_effort: str | None = None,
+    system_prompt: str = SYSTEM_PROMPT,
 ) -> AsyncIterator[str]:
     """模拟 LLM 接口报错（async for 首个 __anext__ 即抛出）"""
     if False:  # 仅用于让本函数成为异步生成器
@@ -91,6 +98,7 @@ async def test_stream_passes_reasoning_effort(monkeypatch: pytest.MonkeyPatch) -
         context_text: str,
         question: str,
         reasoning_effort: str | None = None,
+        system_prompt: str = SYSTEM_PROMPT,
     ) -> AsyncIterator[str]:
         captured["reasoning_effort"] = reasoning_effort
         yield "回答"
@@ -109,3 +117,34 @@ async def test_stream_passes_reasoning_effort(monkeypatch: pytest.MonkeyPatch) -
     ]
     assert captured["reasoning_effort"] == "low"
     assert chunks == ["回答"]
+
+
+async def test_stream_passes_spec_system_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, str] = {}
+
+    async def fake_stream_llm(
+        base_url: str,
+        model: str,
+        api_key: str | None,
+        context_text: str,
+        question: str,
+        reasoning_effort: str | None = None,
+        system_prompt: str = SYSTEM_PROMPT,
+    ) -> AsyncIterator[str]:
+        captured["system_prompt"] = system_prompt
+        yield "推荐"
+
+    monkeypatch.setattr("app.rag.chain._stream_llm", fake_stream_llm)
+    chunks = [
+        c
+        async for c in stream_answer(
+            "这是技术规格参数截图，请帮忙分析是否有匹配的产品",
+            [{"text": "片段", "source": "kb"}],
+            "https://api.z.ai/api/coding/paas/v4",
+            "glm-5.3",
+            "key",
+            system_prompt=SPEC_SYSTEM_PROMPT,
+        )
+    ]
+    assert captured["system_prompt"] == SPEC_SYSTEM_PROMPT
+    assert chunks == ["推荐"]

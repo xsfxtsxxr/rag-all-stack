@@ -5,10 +5,18 @@ export interface ChatMessage {
   content: string
 }
 
+/** 上传规格参数截图后自动填入输入框的默认提问 */
+export const DEFAULT_IMAGE_QUESTION =
+  '这是技术规格参数截图，请帮忙分析是否有匹配的产品，有的话输出产品型号以及价格'
+
 interface ChatState {
   messages: ChatMessage[]
   sending: boolean
-  send: (question: string) => Promise<void>
+  /** 待随本次提问一起发送的规格参数截图（发送成功后清空） */
+  image: File | null
+  setImage: (file: File | null) => void
+  /** 返回是否发送成功（供调用方决定是否清理预览） */
+  send: (question: string) => Promise<boolean>
   clear: () => void
 }
 
@@ -24,11 +32,16 @@ const TYPEWRITER_CHARS_PER_TICK = 2
  * 因此这里先把到达的 token 进缓冲，再由定时器逐字写入界面，
  * 保证无论上游按 token 还是按块到达，前端都是打字机效果。
  */
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   sending: false,
+  image: null,
+
+  setImage: (file) => set({ image: file }),
 
   send: async (question) => {
+    const image = get().image
+    let succeeded = false
     set((s) => ({
       messages: [
         ...s.messages,
@@ -58,12 +71,24 @@ export const useChatStore = create<ChatState>((set) => ({
     }, TYPEWRITER_TICK_MS)
 
     try {
-      const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
-      })
+      let res: Response
+      if (image) {
+        // 带图片询盘：multipart 表单（浏览器自动带 boundary，不要手动设置 Content-Type）
+        const form = new FormData()
+        form.append('question', question)
+        form.append('image', image)
+        res = await fetch('/api/ask', { method: 'POST', body: form })
+      } else {
+        res = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        })
+      }
+      succeeded = res.ok && res.body !== null
       if (!res.ok || !res.body) throw new Error(`问答接口返回 ${res.status}`)
+      // 图片已随本次请求成功发送，清空待用状态
+      set({ image: null })
 
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
@@ -95,7 +120,8 @@ export const useChatStore = create<ChatState>((set) => ({
     } finally {
       streamEnded = true
     }
+    return succeeded
   },
 
-  clear: () => set({ messages: [] }),
+  clear: () => set({ messages: [], image: null }),
 }))

@@ -10,6 +10,13 @@ SYSTEM_PROMPT = (
     "如果片段中没有相关信息，请明确说明，不要编造。"
 )
 
+SPEC_SYSTEM_PROMPT = (
+    "你是一名工业销售询盘知识库助手。用户发来一张技术规格参数截图"
+    "（图片内容已通过 OCR 提取）。请基于给定的知识库片段，分析是否存在匹配的产品："
+    "如果有匹配的产品，请逐个列出产品型号、关键规格与价格，并注明价格有效期；"
+    "如果参数不匹配或知识库中没有相关信息，请明确说明，不要编造。"
+)
+
 
 def build_context(contexts: list[dict[str, str]]) -> str:
     """把检索到的片段拼成带来源标注的上下文"""
@@ -51,6 +58,7 @@ async def _stream_llm(
     context_text: str,
     question: str,
     reasoning_effort: str | None = None,
+    system_prompt: str = SYSTEM_PROMPT,
 ) -> AsyncIterator[str]:
     """调用 OpenAI 兼容接口的流式 chat/completions，逐 token 产出
 
@@ -66,7 +74,7 @@ async def _stream_llm(
         "temperature": 0,
         "stream": True,
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {
                 "role": "user",
                 "content": f"知识库片段：\n{context_text}\n\n用户问题：{question}",
@@ -119,6 +127,7 @@ async def stream_answer(
     model: str,
     api_key: str | None,
     reasoning_effort: str | None = None,
+    system_prompt: str = SYSTEM_PROMPT,
 ) -> AsyncIterator[str]:
     """流式生成回答。
 
@@ -137,7 +146,13 @@ async def stream_answer(
 
     try:
         async for token in _stream_llm(
-            base_url, model, api_key, context_text, question, reasoning_effort
+            base_url,
+            model,
+            api_key,
+            context_text,
+            question,
+            reasoning_effort,
+            system_prompt,
         ):
             yield token
     except LLMError as exc:
