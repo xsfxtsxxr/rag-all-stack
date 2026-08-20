@@ -1,7 +1,7 @@
 {
   "editor.formatOnSave": true,
   "eslint.useFlatConfig": true,
-  "typescript.tsdk": "node_modules/typescript/lib",
+  "js/ts.tsdk.path": "node_modules/typescript/lib",
   "python.defaultInterpreterPath": "${workspaceFolder}/services/ai/.venv/bin/python",
   "python.analysis.typeCheckingMode": "strict",
   "python.analysis.extraPaths": ["services/ai"],
@@ -9,8 +9,8 @@
   "[python]": {
     "editor.defaultFormatter": "charliermarsh.ruff"
   },
-  "python-envs.defaultEnvManager": "ms-python.python:conda",
-  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.defaultEnvManager": "ms-python.python:poetry",
+  "python-envs.defaultPackageManager": "ms-python.python:poetry",
   "gitlens.plusFeatures.enabled": false,
   "gitlens.cloudPatches.enabled": false,
   "gitlens.launchpad.indicator.enabled": false,
