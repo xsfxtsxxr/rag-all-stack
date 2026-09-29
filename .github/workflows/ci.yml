@@ -29,12 +29,13 @@ jobs:
         working-directory: services/ai
     steps:
       - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pipx install poetry==2.4.1
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
           cache: poetry
-      - name: Install Poetry
-        run: python -m pip install poetry==2.4.1
+          cache-dependency-path: services/ai/poetry.lock
       # 精简版无 torch 等重依赖（fastembed/ONNX），安装较快
       - name: Install dependencies
         run: poetry install --with dev --no-root
