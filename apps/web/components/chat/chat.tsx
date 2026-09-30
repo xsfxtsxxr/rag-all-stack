@@ -1,9 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Paperclip, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Paperclip, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_IMAGE_QUESTION, useChatStore } from './store'
 
@@ -17,6 +18,7 @@ export function Chat() {
   const [input, setInput] = useState('')
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const scrollRef = useRef<HTMLElement>(null)
 
   // 组件卸载时释放 Object URL，避免内存泄漏
   useEffect(() => {
@@ -47,6 +49,14 @@ export function Chat() {
     setImage(null)
   }
 
+  function scrollToBottom(): void {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+  }
+
+  function scrollToTop(): void {
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault()
     if (sending) return
@@ -62,13 +72,13 @@ export function Chat() {
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">工业销售询盘知识库</h1>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={clear}>
+          <Button variant="ghost" size="sm" onClick={clear} className="cursor-pointer">
             清空
           </Button>
         </div>
       </header>
 
-      <section className="flex-1 space-y-3 overflow-y-auto">
+      <section ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto">
         {messages.length === 0 && (
           <p className="pt-16 text-center text-sm text-muted-foreground">
             输入询盘问题，例如：你们有没有 22kW 的变频器？价格多少？
@@ -113,6 +123,36 @@ export function Chat() {
             </Button>
           </div>
         )}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm">
+            <Link href="/admin/quotes">查看报价</Link>
+          </Button>
+          <Button variant="outline" size="sm">
+            <Link href="/admin/documents">查看文档</Link>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={scrollToTop}
+            aria-label="滚动到顶部"
+            title="滚动到顶部"
+            className="cursor-pointer"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={scrollToBottom}
+            aria-label="滚动到底部"
+            title="滚动到底部"
+            className="cursor-pointer"
+          >
+            <ArrowDown className="h-4 w-4" />
+          </Button>
+        </div>
         <div className="flex gap-2">
           <input
             ref={fileInputRef}

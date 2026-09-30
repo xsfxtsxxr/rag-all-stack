@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import type { Quote, QuoteStatus } from '@rag/shared-types'
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 
 interface QuoteForm {
   productName: string
@@ -84,7 +85,12 @@ export default function QuotesAdminPage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <h1 className="text-2xl font-semibold">报价管理</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">报价管理</h1>
+        <Button variant="outline" size="sm">
+          <Link href="/">返回首页</Link>
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>

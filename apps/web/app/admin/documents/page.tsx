@@ -1,5 +1,8 @@
 import { ReindexButton } from '@/components/admin/reindex-button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { formatBeijingTime } from '@/lib/utils'
+import Link from 'next/link'
 import { z } from 'zod'
 
 export const dynamic = 'force-dynamic'
@@ -37,8 +40,13 @@ export default async function DocumentsAdminPage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">文档管理</h1>
+        <div className="flex-1">
+          <Button variant="outline" size="sm">
+            <Link href="/">返回首页</Link>
+          </Button>
+        </div>
         <ReindexButton />
       </div>
 
@@ -77,7 +85,7 @@ export default async function DocumentsAdminPage() {
               <td>
                 <Badge>已索引</Badge>
               </td>
-              <td>{d.updatedAt.slice(0, 19).replace('T', ' ')}</td>
+              <td>{formatBeijingTime(d.updatedAt)}</td>
             </tr>
           ))}
         </tbody>

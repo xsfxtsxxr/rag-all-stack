@@ -31,6 +31,10 @@ def _read_docx_files() -> list[tuple[str, bytes]]:
         raise HTTPException(status_code=400, detail=f"文档目录不存在: {folder}")
     files: list[tuple[str, bytes]] = []
     for path in sorted(folder.rglob("*.docx")):
+        # Word 打开文档时会在同目录生成 `~$xxx.docx` 临时锁文件，
+        # 它不是合法的 docx 包，直接解析会抛 BadZipFile，需跳过。
+        if path.name.startswith("~$"):
+            continue
         try:
             files.append((path.name, path.read_bytes()))
         except OSError as exc:
