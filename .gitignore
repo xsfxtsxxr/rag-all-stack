@@ -31,3 +31,7 @@ coverage/
 # 系统与编辑器
 .DS_Store
 *.log
+
+# 示例文件
+/data/inbox/**
+!/data/inbox/.gitkeep
