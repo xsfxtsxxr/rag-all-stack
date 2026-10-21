@@ -1,0 +1,17 @@
+.git
+.github
+.vscode
+**/node_modules
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.env
+.env.*
+docker-compose/.env
+data/inbox/**
+docs/**

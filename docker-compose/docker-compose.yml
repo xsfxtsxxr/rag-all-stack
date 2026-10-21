@@ -1,9 +1,8 @@
 name: rag-all-stack
 
-# 本地开发：默认只启动 PostgreSQL（AI 服务在宿主机直跑，热更新方便）。
-# 部署：加 --profile deploy 才会一并启动 AI 服务容器（无热更新，改代码需重建镜像）。
+# 本地开发：默认只启动 PostgreSQL（Next.js 与 AI 服务在宿主机运行，便于热更新）。
+# 部署：加 --profile deploy 启动数据库初始化、AI 服务和 Next.js 前端容器。
 # 环境变量全部来自同目录 .env（由 .env.example 复制），compose 会自动加载，无需 --env-file。
-# 说明：Next.js 在宿主机运行（热更新方便），不在本文件中。
 
 services:
   postgres:
@@ -22,6 +21,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  db-init:
+    profiles: ['deploy']
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      target: builder
+    container_name: rag-db-init
+    command: ['pnpm', '--filter', '@rag/database', 'exec', 'tsx', 'seeds/init-db.ts']
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-rag_all_stack_db}:${POSTGRES_PASSWORD:-rag_all_stack_db}@postgres:5432/${POSTGRES_DB:-rag_all_stack_db}
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   ai:
     # 部署专用（docker compose --profile deploy up -d 才启动）：
@@ -51,13 +64,34 @@ services:
     ports:
       - '${AI_HOST_PORT:-58008}:8000'
     depends_on:
-      postgres:
-        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     volumes:
       # 待索引 Word 文档目录（只读挂载，容器内路径 /data/inbox）
       - ../data/inbox:/data/inbox:ro
       # 嵌入模型缓存（fastembed 下载的 ONNX 模型持久化，避免每次重建容器重复下载）
       - hfcache:/root/.cache
+
+  web:
+    profiles: ['deploy']
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      target: runner
+    container_name: rag-web
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-rag_all_stack_db}:${POSTGRES_PASSWORD:-rag_all_stack_db}@postgres:5432/${POSTGRES_DB:-rag_all_stack_db}
+      AI_SERVICE_URL: http://ai:8000
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in docker-compose/.env}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      AUTH_TRUST_HOST: 'true'
+    ports:
+      - '${WEB_HOST_PORT:-3000}:3000'
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+      ai:
+        condition: service_started
 
 volumes:
   pgdata:

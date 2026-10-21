@@ -2,7 +2,7 @@
 
 面向工业销售询盘的 RAG 知识库系统（精简版）：文档管理（本地文件夹扫描索引）、报价管理与智能问答。无文件上传、无消息队列、无独立向量库，整体保持轻量。
 
-- **apps/web**：Next.js 16 前端 + 业务 API（问答 SSE 代理、图片询盘、报价 CRUD、重索引触发）
+- **apps/web**：Next.js 16 前端 + 业务 API（问答 SSE 代理、图片询盘、报价 CRUD、重索引触发；可通过 Docker Compose 部署）
 - **services/ai**：FastAPI AI 服务（python-docx 解析、fastembed 向量化、pgvector 检索与问答）
 - **packages**：Drizzle schema / 共享类型
 - **tooling**：共享 TS / ESLint / Prettier 配置
@@ -29,15 +29,30 @@ cp .env.example .env                                # 应用共用（Next.js / A
 cp docker-compose/.env.example docker-compose/.env  # docker compose 专用（compose 自动加载同目录 .env，无需 --env-file）
 ```
 
-### 2. 启动基础设施（仅 PostgreSQL）
+### 2. 启动本地开发数据库
 
 ```bash
 docker compose -f docker-compose/docker-compose.yml up -d
 ```
 
-> 默认只启动 PostgreSQL；AI 服务在宿主机直跑（热更新）。部署时才加 `--profile deploy` 一并启动 AI 容器。
+> 默认只启动 PostgreSQL；Next.js 和 AI 服务在宿主机运行，便于热更新。
 > 两份 env 的端口/凭据需联动修改：`docker-compose/.env` 管宿主机端口映射与容器凭据，根 `.env` 管各应用的连接串。
 > 若 PyPI 下载不稳定，可在 `docker-compose/.env` 中把 `PYPI_INDEX_URL` 切换为镜像源（如 `https://mirrors.aliyun.com/pypi/simple`），重建 AI 镜像时生效。
+
+### 使用 Docker Compose 一键部署
+
+在 `docker-compose/.env` 中设置数据库凭据、AI/LLM 配置，并将 `NEXTAUTH_SECRET` 替换为随机密钥，然后运行：
+
+```bash
+docker compose -f docker-compose/docker-compose.yml --profile deploy up -d --build
+```
+
+该命令会构建并启动 PostgreSQL、数据库初始化任务、AI 服务和 Next.js 前端。首次启动会自动创建业务表；前端默认通过 `http://localhost:3000` 访问。修改 `WEB_HOST_PORT` 或 `NEXTAUTH_URL` 可调整对外端口或部署地址。查看状态和日志：
+
+```bash
+docker compose -f docker-compose/docker-compose.yml --profile deploy ps
+docker compose -f docker-compose/docker-compose.yml --profile deploy logs -f web ai
+```
 
 ### 3. 启动 AI 服务（本地热更新）
 
@@ -103,7 +118,7 @@ poetry run ruff check . && poetry run mypy app tests   # lint + 类型检查
 | 变量 | 说明 |
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL 连接串 |
-| `AI_SERVICE_URL` | AI 服务地址（本地直跑 `http://localhost:8008`；部署容器 `http://localhost:58008`） |
+| `AI_SERVICE_URL` | AI 服务地址（本地直跑 `http://localhost:8008`；Compose 内部由 web 连接 `http://ai:8000`） |
 | `DOCS_DIR` | AI 服务本地直跑时的文档目录（容器部署固定 `/data/inbox`） |
 | `NEXTAUTH_SECRET` / `NEXTAUTH_URL` | NextAuth 配置 |
 | `EMBED_MODEL` / `EMBED_DIM` | AI 服务嵌入模型（fastembed） |
@@ -111,7 +126,7 @@ poetry run ruff check . && poetry run mypy app tests   # lint + 类型检查
 | `LLM_BASE_URL` / `LLM_MODEL` / `LLM_API_KEY` | LLM（OpenAI 兼容接口；GLM Coding Plan 用 `https://api.z.ai/api/coding/paas/v4`） |
 | `LLM_REASONING_EFFORT` | 推理强度 low/high/max（glm-5.3 等推理模型，留空不发送） |
 
-环境文件只有两份：根目录 `.env`（模板 `.env.example`）给 Next.js / 本地 AI 服务 / 数据库脚本共用；`docker-compose/.env`（模板 `docker-compose/.env.example`）仅放 compose 专用变量（镜像、宿主机端口、凭据、容器内 AI 配置）。二者中的端口与凭据需保持一致。
+环境文件只有两份：根目录 `.env`（模板 `.env.example`）给本地 Next.js / AI 服务 / 数据库脚本共用；`docker-compose/.env`（模板 `docker-compose/.env.example`）用于 Compose 部署（镜像、宿主机端口、凭据、容器内 AI 配置及 NextAuth 配置）。数据库凭据应与根 `.env` 中的连接串保持一致。
 
 ## 目录结构
 
@@ -121,6 +136,6 @@ packages/    database（Drizzle schema + migrations + seeds）、shared-types
 tooling/     typescript-config、eslint-config、prettier-config
 services/    ai（FastAPI，Poetry 管理，不属于 pnpm 工作区）
 data/inbox/  待索引 Word 文档目录（只读挂载进 AI 容器 /data/inbox）
-docker-compose/  基础设施编排（PostgreSQL + 部署用 AI 容器，`--profile deploy`）
+docker-compose/  基础设施与应用编排（PostgreSQL + 部署用 AI / Next.js 容器，`--profile deploy`）
 docs/        产品规格说明书与项目文档
 ```
